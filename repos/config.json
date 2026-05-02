@@ -1,0 +1,32 @@
+{
+    "agaent_config": {
+        "apply_order":
+        ["whitelist","blacklist"],
+        "whitelist":[
+            {"type":"Regex","repo":".*","agent":".*"}
+        ],
+        "blacklist":[]
+    },
+    "skill_config": {
+        "priority_order":["whitelist","blacklist"],
+        "whitelist":[
+            {"type":"Regex","repo":"sickn33/antigravity-awesome-skills","skill":"^agents-md$"},
+            {"type":"Regex","repo":"safishamsi/graphify","skill":"graphify"},
+            {"type":"Regex","repo":"JuliusBrussee/caveman","skill":"^(caveman|caveman-compress)$"},
+            {"type":"Regex","repo":"obra/superpowers","skill":".*"}
+        ],
+        "blacklist":[]
+    },
+    "external_repos": [
+        "https://github.com/obra/superpowers.git",
+        "https://github.com/JuliusBrussee/caveman.git",
+        "https://github.com/sickn33/antigravity-awesome-skills.git",
+        "https://github.com/safishamsi/graphify.git"
+    ],
+    "unwanted-for-now": [
+        "https://github.com/github/awesome-copilot.git",
+        "https://github.com/anthropics/skills.git",
+        "https://github.com/openai/skills.git",
+        "https://github.com/ComposioHQ/awesome-claude-skills.git"
+    ]
+}
