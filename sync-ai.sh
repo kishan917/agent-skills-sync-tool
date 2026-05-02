@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # --- CONFIGURATION ---
 export CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE}" )" >/dev/null 2>&1 && pwd )"
@@ -30,6 +30,17 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
     echo "❌ Missing config file: $CONFIG_FILE"
     exit 1
 fi
+
+# --- PORTABLE SED IN-PLACE ---
+sed_inplace() {
+    if sed --version >/dev/null 2>&1; then
+        # GNU sed (Linux, Git Bash on Windows)
+        sed -i "$@"
+    else
+        # BSD sed (macOS)
+        sed -i '' "$@"
+    fi
+}
 
 # --- URL/PATH HELPERS ---
 normalize_external_slug() {
@@ -79,6 +90,80 @@ repo_id_for_item() {
     echo "$first"
 }
 
+# --- PATCH SKILL NAMES IN EXTERNAL REPO ---
+patch_skill_names() {
+    local repo_path="$1"
+    local repo_slug="$2"
+
+    local should_patch
+    should_patch=$(jq -r '.patch_skill_names // true' "$CONFIG_FILE")
+    [[ "$should_patch" == "true" ]] || return 0
+
+    local repo_base
+    repo_base="$(basename "$repo_slug")"
+
+    # Collect all skill names and their file paths into a temp file (tab-separated)
+    local tmpfile
+    tmpfile=$(mktemp)
+    find "$repo_path" -type f -iname "SKILL.md" | while IFS= read -r skill_file; do
+        local skill_dir skill_name
+        skill_dir="$(dirname "$skill_file")"
+        skill_name="$(basename "$skill_dir")"
+        printf '%s\t%s\n' "$skill_name" "$skill_file"
+    done > "$tmpfile"
+
+    [[ -s "$tmpfile" ]] || { rm -f "$tmpfile"; return 0; }
+
+    # Extract just skill names for batch filtering
+    local all_skills
+    all_skills=$(awk -F'\t' '{print $1}' "$tmpfile" | sort -u)
+
+    # Single jq call to get matching skills
+    local matched
+    matched=$(echo "$all_skills" | jq -R -r --arg repo "$repo_slug" --arg key "skill_config" --slurpfile cfg "$CONFIG_FILE" '
+        . as $item_name |
+        select($item_name != "") |
+        $cfg[0][$key] as $cfgblock |
+        ($cfgblock.apply_order // $cfgblock.priority_order // ["whitelist", "blacklist"]) as $order |
+
+        def match_rule(r; val_full; val_base; pattern):
+            (if pattern == "*" then ".*" else pattern | gsub("\\."; "\\.") end) as $p |
+            if r.type == "Literal" then
+                (pattern == "*" or val_full == pattern or val_base == pattern)
+            else
+                (val_full | test($p)) or (val_base | test($p))
+            end;
+
+        def is_in_list(list; r_val; i_full; i_base; item_key):
+            any(list[]; . as $rule |
+                match_rule($rule; r_val; r_val; $rule.repo) and
+                match_rule($rule; i_full; i_base; $rule[item_key])
+            );
+
+        (reduce $order[] as $step (false;
+            if $step == "whitelist" then
+                if is_in_list($cfgblock.whitelist // []; $repo; $item_name; $item_name; "skill") then true else . end
+            elif $step == "blacklist" then
+                if is_in_list($cfgblock.blacklist // []; $repo; $item_name; $item_name; "skill") then false else . end
+            else . end
+        )) as $result |
+        if $result then $item_name else empty end
+    ')
+
+    # Patch only matched skills
+    echo "$matched" | while IFS= read -r skill_name; do
+        [[ -n "$skill_name" ]] || continue
+        local skill_file
+        skill_file=$(awk -F'\t' -v skill="$skill_name" '$1 == skill {print $2; exit}' "$tmpfile")
+        [[ -n "$skill_file" ]] || continue
+        local new_name="${repo_base}:${skill_name}"
+        sed_inplace "s/^name: .*/name: ${new_name}/" "$skill_file"
+        echo "  📝 Patched skill name → ${new_name}"
+    done
+
+    rm -f "$tmpfile"
+}
+
 # --- EXTERNAL REPO UPDATE (CLONE/PULL) ---
 sync_external_repos() {
     local has_external_repos
@@ -107,14 +192,27 @@ sync_external_repos() {
         if [[ -d "$repo_path/.git" ]]; then
             echo "⬇️  Pulling latest: $repo_slug"
             if [[ "$DRY_RUN" = false ]]; then
-                git -C "$repo_path" pull --ff-only || echo "⚠️  Pull failed for $repo_name"
+                git -C "$repo_path" reset --hard HEAD 2>/dev/null
+                if ! git -C "$repo_path" pull --ff-only 2>/dev/null; then
+                    echo "⚠️  Pull failed for $repo_name, re-cloning..."
+                    rm -rf "$repo_path"
+                    if ! git clone "$repo_url" "$repo_path"; then
+                        echo "⚠️  Clone failed for $repo_url"
+                        continue
+                    fi
+                fi
+                patch_skill_names "$repo_path" "$repo_slug"
             fi
         elif [[ -e "$repo_path" ]]; then
             echo "⚠️  Skipping clone for $repo_name (path exists but is not a git repo)"
         else
             echo "📥 Cloning: $repo_url"
             if [[ "$DRY_RUN" = false ]]; then
-                git clone "$repo_url" "$repo_path" || echo "⚠️  Clone failed for $repo_url"
+                if git clone "$repo_url" "$repo_path"; then
+                    patch_skill_names "$repo_path" "$repo_slug"
+                else
+                    echo "⚠️  Clone failed for $repo_url"
+                fi
             fi
         fi
     done
@@ -175,6 +273,8 @@ check_config() {
     ' "$CONFIG_FILE"
 }
 
+# Returns newline-separated list of skill names that pass config for a given repo
+# Single jq call for all candidates — avoids per-skill subprocess overhead
 echo "🚀 Syncing AI Registry..."
 sync_external_repos
 prune_external_repos
@@ -200,20 +300,78 @@ done
 # --- 2. SYNC SKILLS ---
 for source_root in "$EXTERNAL_REPOS_DIR" "$CUSTOM_REPOS_DIR"; do
     [[ -d "$source_root" ]] || continue
-    find "$source_root" -type f -iname "SKILL.md" | while read -r skill_file; do
+
+    # Collect all skills into a temp file: repo_name<TAB>skill_name<TAB>src_dir
+    _skill_tmp=$(mktemp)
+    find "$source_root" -type f -iname "SKILL.md" | while IFS= read -r skill_file; do
         src_dir=$(dirname "$skill_file")
         relative_path=${src_dir#$source_root/}
         repo_name=$(repo_id_for_item "$source_root" "$relative_path")
         skill_name=$(basename "$src_dir")
-        dest="$SKILLS_TARGET/$(basename "$repo_name"):${skill_name}"
+        printf '%s\t%s\t%s\n' "$repo_name" "$skill_name" "$src_dir"
+    done > "$_skill_tmp"
 
-        if [[ $(check_config "skill_config" "$repo_name" "$skill_name") == "true" ]]; then
+    # Get unique repos
+    _repos=$(awk -F'\t' '{print $1}' "$_skill_tmp" | sort -u)
+
+    # Process each repo with a single batch jq call
+    echo "$_repos" | while IFS= read -r repo_name; do
+        [[ -n "$repo_name" ]] || continue
+
+        # Extract skill names for this repo (unique, exact field match)
+        _repo_skills=$(awk -F'\t' -v repo="$repo_name" '$1 == repo {print $2}' "$_skill_tmp" | sort -u)
+
+        # Get matching skills in one jq call
+        matched_skills=$(echo "$_repo_skills" | jq -R -r --arg repo "$repo_name" --arg key "skill_config" --slurpfile cfg "$CONFIG_FILE" '
+            . as $item_name |
+            select($item_name != "") |
+            $cfg[0][$key] as $cfgblock |
+            ($cfgblock.apply_order // $cfgblock.priority_order // ["whitelist", "blacklist"]) as $order |
+
+            def match_rule(r; val_full; val_base; pattern):
+                (if pattern == "*" then ".*" else pattern | gsub("\\."; "\\.") end) as $p |
+                if r.type == "Literal" then
+                    (pattern == "*" or val_full == pattern or val_base == pattern)
+                else
+                    (val_full | test($p)) or (val_base | test($p))
+                end;
+
+            def is_in_list(list; r_val; i_full; i_base; item_key):
+                any(list[]; . as $rule |
+                    match_rule($rule; r_val; r_val; $rule.repo) and
+                    match_rule($rule; i_full; i_base; $rule[item_key])
+                );
+
+            (reduce $order[] as $step (false;
+                if $step == "whitelist" then
+                    if is_in_list($cfgblock.whitelist // []; $repo; $item_name; $item_name; "skill") then true else . end
+                elif $step == "blacklist" then
+                    if is_in_list($cfgblock.blacklist // []; $repo; $item_name; $item_name; "skill") then false else . end
+                else . end
+            )) as $result |
+            if $result then $item_name else empty end
+        ')
+
+        # Link matched skills
+        echo "$matched_skills" | while IFS= read -r skill_name; do
+            [[ -n "$skill_name" ]] || continue
+            src_dir=$(awk -F'\t' -v repo="$repo_name" -v skill="$skill_name" '$1 == repo && $2 == skill {print $3; exit}' "$_skill_tmp")
+            dest="$SKILLS_TARGET/$(basename "$repo_name"):${skill_name}"
             echo "✅ Linking Skill: $(basename "$dest") (Repo: $repo_name)"
             [ "$DRY_RUN" = false ] && ln -sfn "$src_dir" "$dest"
-        else
-            [ -L "$dest" ] && echo "🗑️  Removing Skill: $(basename "$dest")" && [ "$DRY_RUN" = false ] && rm -f "$dest"
-        fi
+        done
+
+        # Remove symlinks for non-matched skills
+        echo "$_repo_skills" | while IFS= read -r skill_name; do
+            [[ -n "$skill_name" ]] || continue
+            if ! echo "$matched_skills" | grep -qxF "$skill_name"; then
+                dest="$SKILLS_TARGET/$(basename "$repo_name"):${skill_name}"
+                [ -L "$dest" ] && echo "🗑️  Removing Skill: $(basename "$dest")" && [ "$DRY_RUN" = false ] && rm -f "$dest"
+            fi
+        done
     done
+
+    rm -f "$_skill_tmp"
 done
 
 # --- 3. CLEANUP (Ignoring nested skills in agents) ---

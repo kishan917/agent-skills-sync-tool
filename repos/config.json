@@ -17,16 +17,17 @@
         ],
         "blacklist":[]
     },
+    "patch_skill_names": true,
     "external_repos": [
         "https://github.com/obra/superpowers.git",
         "https://github.com/JuliusBrussee/caveman.git",
-        "https://github.com/sickn33/antigravity-awesome-skills.git",
-        "https://github.com/safishamsi/graphify.git"
+        "https://github.com/sickn33/antigravity-awesome-skills.git"
     ],
     "unwanted-for-now": [
         "https://github.com/github/awesome-copilot.git",
         "https://github.com/anthropics/skills.git",
         "https://github.com/openai/skills.git",
-        "https://github.com/ComposioHQ/awesome-claude-skills.git"
+        "https://github.com/ComposioHQ/awesome-claude-skills.git",
+        "https://github.com/safishamsi/graphify.git"
     ]
 }
