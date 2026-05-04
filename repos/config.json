@@ -19,6 +19,7 @@
         "blacklist":[]
     },
     "patch_skill_names": true,
+    "sync_to_copilot_home": true,
     "external_repos": [
         "https://github.com/obra/superpowers.git",
         "https://github.com/JuliusBrussee/caveman.git"

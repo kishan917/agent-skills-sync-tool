@@ -386,4 +386,57 @@ find "$AGENTS_TARGET" -path "$AGENTS_TARGET/skills" -prune -o -type l ! -exec te
     [ "$DRY_RUN" = false ] && rm -f "$broken_link"
 done
 
+# --- 4. SYNC TO ~/.copilot/ (agents & skills) ---
+SYNC_TO_COPILOT=$(jq -r '.sync_to_copilot_home // false' "$CONFIG_FILE")
+if [[ "$SYNC_TO_COPILOT" == "true" ]]; then
+    COPILOT_HOME="$HOME/.copilot"
+    COPILOT_AGENTS="$COPILOT_HOME/agents"
+    COPILOT_SKILLS="$COPILOT_HOME/skills"
+    mkdir -p "$COPILOT_AGENTS" "$COPILOT_SKILLS"
+
+    echo "🏠 Phase 4: Syncing to ~/.copilot/ ..."
+
+    # Mirror agent symlinks
+    # First, remove managed symlinks in ~/.copilot/agents that no longer exist in artifacts
+    find "$COPILOT_AGENTS" -maxdepth 1 -type l | while IFS= read -r link; do
+        link_name="$(basename "$link")"
+        if [[ ! -L "$AGENTS_TARGET/$link_name" ]]; then
+            echo "🗑️  Removing agent from ~/.copilot: $link_name"
+            [ "$DRY_RUN" = false ] && rm -f "$link"
+        fi
+    done
+
+    # Create/update agent symlinks — point to same targets as artifacts
+    find "$AGENTS_TARGET" -maxdepth 1 -type l | while IFS= read -r link; do
+        link_name="$(basename "$link")"
+        link_target="$(readlink "$link")"
+        dest="$COPILOT_AGENTS/$link_name"
+        echo "🏠 Linking Agent → ~/.copilot/agents/$link_name"
+        [ "$DRY_RUN" = false ] && ln -sf "$link_target" "$dest"
+    done
+
+    # Mirror skill symlinks
+    # First, remove managed symlinks in ~/.copilot/skills that no longer exist in artifacts
+    find "$COPILOT_SKILLS" -maxdepth 1 -type l | while IFS= read -r link; do
+        link_name="$(basename "$link")"
+        if [[ ! -L "$SKILLS_TARGET/$link_name" ]]; then
+            echo "🗑️  Removing skill from ~/.copilot: $link_name"
+            [ "$DRY_RUN" = false ] && rm -f "$link"
+        fi
+    done
+
+    # Create/update skill symlinks — point to same targets as artifacts
+    find "$SKILLS_TARGET" -maxdepth 1 -type l | while IFS= read -r link; do
+        link_name="$(basename "$link")"
+        link_target="$(readlink "$link")"
+        dest="$COPILOT_SKILLS/$link_name"
+        echo "🏠 Linking Skill → ~/.copilot/skills/$link_name"
+        [ "$DRY_RUN" = false ] && ln -sfn "$link_target" "$dest"
+    done
+
+    # Clean broken symlinks in ~/.copilot
+    find "$COPILOT_AGENTS" -maxdepth 1 -type l ! -exec test -e {} \; -delete 2>/dev/null
+    find "$COPILOT_SKILLS" -maxdepth 1 -type l ! -exec test -e {} \; -delete 2>/dev/null
+fi
+
 echo "✅ Sync Complete!"
