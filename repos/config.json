@@ -10,6 +10,7 @@
     "skill_config": {
         "priority_order":["whitelist","blacklist"],
         "whitelist":[
+            {"type":"Regex","repo":"custom","skill":".*"},
             {"type":"Regex","repo":"sickn33/antigravity-awesome-skills","skill":"^agents-md$"},
             {"type":"Regex","repo":"safishamsi/graphify","skill":"graphify"},
             {"type":"Regex","repo":"JuliusBrussee/caveman","skill":"^(caveman|caveman-compress)$"},
@@ -20,10 +21,10 @@
     "patch_skill_names": true,
     "external_repos": [
         "https://github.com/obra/superpowers.git",
-        "https://github.com/JuliusBrussee/caveman.git",
-        "https://github.com/sickn33/antigravity-awesome-skills.git"
+        "https://github.com/JuliusBrussee/caveman.git"
     ],
     "unwanted-for-now": [
+        "https://github.com/sickn33/antigravity-awesome-skills.git",
         "https://github.com/github/awesome-copilot.git",
         "https://github.com/anthropics/skills.git",
         "https://github.com/openai/skills.git",

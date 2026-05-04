@@ -114,6 +114,14 @@ This blocks everything from that repo *except* `agents-md`. Because `apply_order
 { "type": "Regex", "repo": "openai/skills", "skill": "^(openai-docs|skill-creator|skill-installer)$" }
 ```
 
+**Sync all skills from a custom repo**
+
+Custom repos under `repos/custom-repos/` use the first folder name as the repo identifier. For example, if your skills live in `repos/custom-repos/custom/brainstorming/`, the repo is `custom`:
+```json
+{ "type": "Regex", "repo": "custom", "skill": ".*" }
+```
+This whitelists all skills under `repos/custom-repos/custom/`. The synced names will be `custom:brainstorming`, `custom:skill-creator`, etc.
+
 ---
 
 ### Symlink naming
