@@ -25,7 +25,7 @@ This tool clones configured external repositories into `repos/external-repos/<or
 ├── synced-items/
 │   ├── agents/         <-- SYNC TARGET: Point VS Code/IntelliJ here
 │   └── skills/         <-- SYNC TARGET: Point VS Code/IntelliJ here
-├── sync-ai.sh          <-- Execution Script
+├── sync-agents-skills.sh          <-- Execution Script
 └── README.md           <-- Documentation
 
 ```
@@ -172,10 +172,10 @@ The `unwanted-for-now` key is ignored by the script. Use it to store URLs you mi
 Requires jq installed (brew install jq on Mac).
 
 # Standard sync
-./sync-ai.sh
+./sync-agents-skills.sh
 
 # Dry run (see changes without applying)
-./sync-ai.sh --dry-run
+./sync-agents-skills.sh --dry-run
 
 ### IDE Integration
 
