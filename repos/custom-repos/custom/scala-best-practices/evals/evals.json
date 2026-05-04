@@ -1,0 +1,128 @@
+{
+  "skill_name": "scala-best-practices",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have this Scala code: `def getUser(id: Long) = { val u = userMap.get(id); if (u != null) u else throw new RuntimeException(\"not found\") }`. Can you review it for Scala best practices?",
+      "expected_output": "The review identifies: (1) `null` usage — replace with `Option[T]`; (2) throwing exception for a not-found case — use `Option` or `Either` instead; (3) missing explicit return type on public function; (4) suggests idiomatic rewrite using `userMap.get(id)` returning `Option` directly.",
+      "assertions": [
+        "Flags the use of `null` and recommends `Option[T]`",
+        "Flags throwing an exception for flow control and recommends `Option` or `Either`",
+        "Notes that public functions should have explicit return types",
+        "Provides an idiomatic Scala rewrite without null and without exceptions for flow control"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Write a Scala function that parses a user's age from a string, returning an error message if it's invalid or not a positive integer.",
+      "expected_output": "Returns `Either[String, Int]` (or similar error type), uses `toIntOption`, no exceptions thrown, no null values, explicit return type annotated.",
+      "assertions": [
+        "Uses `Either`, `Try`, or `Option` as the return type — not a raw exception",
+        "Does not use `throw` for the validation failure",
+        "Does not use `null`",
+        "Has an explicit return type annotation",
+        "Handles the non-positive case (e.g., age <= 0)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I'm getting a `NoSuchElementException` in my Scala code on line `val first = myList.head`. How do I fix this?",
+      "expected_output": "Explains that `Seq.head` throws on empty collection, recommends `headOption` combined with `getOrElse` or pattern matching, provides code example.",
+      "assertions": [
+        "Identifies that `head` on an empty collection throws `NoSuchElementException`",
+        "Recommends `headOption` as the safe alternative",
+        "Provides a concrete code example with `headOption.getOrElse(...)` or pattern matching"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Should I define a trait `UserLike` and have my `case class User(name: String, age: Int)` extend it, even though there's only one implementation?",
+      "expected_output": "Advises against it — useless traits add cognitive overhead and signal polymorphism that does not exist. Case classes should be kept simple and final. Traits are appropriate when polymorphism is genuinely needed.",
+      "assertions": [
+        "Advises against the useless trait",
+        "Explains that a trait with one implementation signals false polymorphism",
+        "Recommends keeping the case class simple",
+        "Mentions that `final case class` is preferred"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I want to make a database call inside a Future in Scala. My JDBC call blocks. What should I do?",
+      "expected_output": "Explains the risk of blocking the ForkJoin thread pool without marking blocking calls, recommends wrapping in `scala.concurrent.blocking { }`, optionally recommends using a dedicated I/O thread pool.",
+      "assertions": [
+        "Warns about blocking the ForkJoin thread pool causing potential deadlocks",
+        "Shows usage of `scala.concurrent.blocking { }` around the JDBC call",
+        "Recommends a dedicated I/O ExecutionContext as an optional improvement"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Is it OK to do `import scala.concurrent.ExecutionContext.Implicits.global` in my service class?",
+      "expected_output": "Advises against it for library/service code — it hard-codes the thread pool. Recommends passing `ExecutionContext` as an implicit parameter in the second parameter list.",
+      "assertions": [
+        "Advises against hard-coding the global ExecutionContext in service code",
+        "Recommends passing `implicit ec: ExecutionContext` as a parameter",
+        "Shows the correct method signature with EC in the second parameter list"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "How should I name my Scala classes, methods, and constants? Give me the naming conventions.",
+      "expected_output": "Covers: Classes/traits/objects → UpperCamelCase; methods/vals/vars → lowerCamelCase; constants → UpperCamelCase; packages → lowercase dot-separated; type params → single uppercase letter or descriptive UpperCamelCase.",
+      "assertions": [
+        "States classes/traits/objects use UpperCamelCase",
+        "States methods, vals, vars use lowerCamelCase",
+        "States constants use UpperCamelCase (not UPPER_SNAKE_CASE like Java)",
+        "States packages use lowercase"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "I have a try-catch block: `try { riskyOp() } catch { case ex: Throwable => log(ex) }`. Is this OK?",
+      "expected_output": "Warns that catching Throwable also catches fatal JVM errors (OutOfMemoryError, StackOverflowError) and can leave the process in a zombie state. Recommends `NonFatal` from `scala.util.control.NonFatal` instead.",
+      "assertions": [
+        "Flags catching `Throwable` as dangerous",
+        "Explains that `OutOfMemoryError` and similar fatal errors should not be caught",
+        "Provides a corrected example using `NonFatal`"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "I'm iterating over a list with var: `var sum = 0; for (x <- numbers) { sum += x.value }`. How do I make this more idiomatic Scala?",
+      "expected_output": "Replaces the var+loop with `foldLeft` or `numbers.map(_.value).sum`, explains that Scala prefers expressions over statements and immutability over mutation.",
+      "assertions": [
+        "Eliminates the `var` and the for-loop mutation",
+        "Uses `foldLeft` or `map` + `sum` as the idiomatic replacement",
+        "Explains the preference for immutability and expression-oriented style"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "I need to choose between Akka Actors and Scala Futures for a service that makes HTTP calls and returns results to callers. What should I use?",
+      "expected_output": "Recommends `Future` for simple async request-response where each call produces one result. Akka Actors would be over-engineering here; Actors are better for stateful bidirectional communication, WebSocket, or complex state machines.",
+      "assertions": [
+        "Recommends Future as the simpler and more appropriate abstraction",
+        "Explains when Actors are appropriate (stateful, bidirectional, WebSocket)",
+        "Advises against using Actors for simple async HTTP calls"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "write a fibonacci function in scala",
+      "expected_output": "Provides a Fibonacci implementation without triggering extensive best-practices lecture. The skill may apply basic idioms (no var in recursive solution, pattern matching) but should not over-apply best-practices guidance for this simple task.",
+      "should_trigger": false,
+      "assertions": [
+        "Provides a working Fibonacci implementation"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "how do I set up a postgres database",
+      "expected_output": "Provides PostgreSQL setup instructions without applying Scala-specific guidance.",
+      "should_trigger": false,
+      "assertions": [
+        "Does not apply Scala-specific best practices to a PostgreSQL setup question"
+      ]
+    }
+  ]
+}

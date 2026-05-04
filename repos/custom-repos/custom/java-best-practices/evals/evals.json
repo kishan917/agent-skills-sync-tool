@@ -1,0 +1,93 @@
+{
+  "skill_name": "java-best-practices",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review this Java code and suggest improvements:\n\npublic class UserService {\n    @Autowired\n    private UserRepository repo;\n\n    public User getUser(long id) {\n        User user = repo.findById(id);\n        if (user == null) return null;\n        return user;\n    }\n}",
+      "expected_output": "The review should identify: field injection (recommend constructor injection), returning null (recommend Optional), the null check being redundant, and suggest making the class follow best practices with final fields.",
+      "assertions": [
+        "Suggests constructor injection instead of @Autowired field injection",
+        "Suggests returning Optional<User> instead of null",
+        "Recommends making the repository field final",
+        "Does not suggest changes unrelated to Java best practices"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to write a Java class that represents a simple data carrier for a user with name, email, and age. What's the best way?",
+      "expected_output": "Recommends using a Java record (Java 16+) with validation, and shows a traditional immutable class as fallback for older Java versions.",
+      "assertions": [
+        "Suggests using a Java record as the primary approach",
+        "Notes the Java version requirement for records (Java 16+)",
+        "Shows a fallback approach for older Java versions with final fields and constructor",
+        "Includes input validation"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "fix this java code:\n\ntry {\n    FileInputStream fis = new FileInputStream(\"data.txt\");\n    String data = new String(fis.readAllBytes());\n    fis.close();\n} catch (Exception e) {\n}",
+      "expected_output": "Should fix: use try-with-resources instead of manual close, catch specific IOException instead of generic Exception, and handle or log the exception instead of empty catch block.",
+      "assertions": [
+        "Suggests try-with-resources statement",
+        "Replaces generic Exception with specific IOException",
+        "Adds exception handling in the catch block (logging or rethrowing)",
+        "The corrected code compiles and follows Java best practices"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "How should I handle concurrency in a Java 21 application that makes many HTTP calls?",
+      "expected_output": "Recommends virtual threads for I/O-bound HTTP calls, shows Executors.newVirtualThreadPerTaskExecutor(), mentions structured concurrency as preview, and warns about not using synchronized with virtual threads.",
+      "assertions": [
+        "Recommends virtual threads as the primary approach for Java 21",
+        "Shows code using Executors.newVirtualThreadPerTaskExecutor()",
+        "Warns about synchronized pinning carrier threads",
+        "Mentions CompletableFuture as an alternative or complementary approach"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Write a Java method that finds users by status and returns their email addresses as a sorted list.",
+      "expected_output": "Uses Stream API with filter, map, sorted, and toList(). Follows naming conventions, uses Optional where appropriate, and demonstrates modern Java idioms.",
+      "assertions": [
+        "Uses Stream API (filter, map, sorted)",
+        "Uses method references where applicable",
+        "Returns an immutable or unmodifiable list",
+        "Follows Java naming conventions"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "I have a HashMap that I need to access from multiple threads. What should I do?",
+      "expected_output": "Recommends ConcurrentHashMap as the primary solution. Explains why synchronized HashMap or Collections.synchronizedMap are inferior. Shows proper usage patterns.",
+      "assertions": [
+        "Recommends ConcurrentHashMap as primary solution",
+        "Explains why not to use Collections.synchronizedMap or Hashtable",
+        "Shows correct ConcurrentHashMap usage patterns",
+        "Mentions atomic operations like computeIfAbsent"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "What's wrong with this code?\n\nString query = \"SELECT * FROM users WHERE name = '\" + userName + \"'\";\nStatement stmt = conn.createStatement();\nResultSet rs = stmt.executeQuery(query);",
+      "expected_output": "Identifies SQL injection vulnerability. Recommends PreparedStatement with parameterized queries. Shows the corrected code.",
+      "assertions": [
+        "Identifies the SQL injection vulnerability",
+        "Recommends PreparedStatement with parameterized queries",
+        "Shows corrected code using PreparedStatement",
+        "Mentions try-with-resources for the Statement and ResultSet"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Help me write a Java enum for HTTP status codes with code number and description, and a method to check if it's a success code.",
+      "expected_output": "Creates an enum with fields (code, description), constructor, getters, and an isSuccess() method. Follows naming conventions and Java enum best practices.",
+      "assertions": [
+        "Creates enum with int code and String description fields",
+        "Includes a constructor and accessor methods",
+        "Implements isSuccess() method checking code range 200-299",
+        "Uses UPPER_SNAKE_CASE for enum constants"
+      ]
+    }
+  ]
+}
