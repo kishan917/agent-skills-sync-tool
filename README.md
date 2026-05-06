@@ -39,7 +39,8 @@ This tool clones configured external repositories into `repos/external-repos/<or
 | `agaent_config` | Controls which `.agent.md` files are symlinked |
 | `skill_config` | Controls which `SKILL.md` folders are symlinked |
 | `external_repos` | List of Git URLs to clone/pull into `external-repos/<org>/<repo>` |
-| `patch_skill_names` | `true` (default) — rewrites `name:` in each external `SKILL.md` to `<repo>:<skill>` so VS Code Copilot shows the namespaced name. Set to `false` to keep original names. |
+| `patch_skill_names` | `true` (default) — rewrites `name:` in each external `SKILL.md` to `<repo>.<skill>` so VS Code Copilot shows the namespaced name. Set to `false` to keep original names. |
+| `sync_to_copilot_home` | `true` — also mirrors synced agent/skill symlinks into `~/.copilot/agents` and `~/.copilot/skills` for global Copilot access. `false` (default) — only syncs to `artifacts/synced-items/`. |
 | `unwanted-for-now` | Ignored by the script — a parking lot for URLs you don't want active yet |
 
 ---
@@ -120,21 +121,22 @@ Custom repos under `repos/custom-repos/` use the first folder name as the repo i
 ```json
 { "type": "Regex", "repo": "custom", "skill": ".*" }
 ```
-This whitelists all skills under `repos/custom-repos/custom/`. The synced names will be `custom:brainstorming`, `custom:skill-creator`, etc.
+This whitelists all skills under `repos/custom-repos/custom/`. The synced names will be `custom.brainstorming`, `custom.skill-creator`, etc.
 
 ---
 
 ### Symlink naming
 
-Synced items are named `<namespace>:<item>` to avoid collisions across repos:
+Synced items are named `<namespace>.<item>` to avoid collisions across repos:
 
 | Source | Synced name |
 | :--- | :--- |
-| `external-repos/JuliusBrussee/caveman/caveman/` | `caveman:caveman` |
-| `custom-repos/manually-created/brainstorming/` | `manually-created:brainstorming` |
-| `custom-repos/copied/agents-md/` | `copied:agents-md` |
+| `external-repos/JuliusBrussee/caveman/caveman/` | `caveman.caveman` |
+| `custom-repos/manually-created/brainstorming/` | `manually-created.brainstorming` |
 
 The namespace is the **last segment** of the repo path (`basename` of `org/repo` for external, subfolder name for custom).
+
+The delimiter (`.`) is controlled by the `NAME_DELIMITER` variable at the top of `sync-agents-skills.sh`. Change it to any character allowed in skill names (letters, numbers, hyphens, underscores, dots, spaces).
 
 ---
 
@@ -154,7 +156,7 @@ The `unwanted-for-now` key is ignored by the script. Use it to store URLs you mi
 ## 🚀 How it Works
 
 1. Clone/Pull: Reads `external_repos` from `repos/config.json` and clones missing repos or pulls existing ones into `repos/external-repos/<org>/<repo>`. On pull conflict, the repo is deleted and re-cloned cleanly.
-2. Patch Names: If `patch_skill_names` is `true` (default), rewrites the `name:` field in each external `SKILL.md` to `<repo>:<skill>` — so VS Code Copilot displays the namespaced name instead of the bare skill name.
+2. Patch Names: If `patch_skill_names` is `true` (default), rewrites the `name:` field in each external `SKILL.md` to `<repo>.<skill>` — so VS Code Copilot displays the namespaced name instead of the bare skill name.
 3. Crawl: Searches both `repos/external-repos/` and `repos/custom-repos/` recursively for `.agent.md` and `SKILL.md`.
 2. Crawl: Searches both `repos/external-repos/` and `repos/custom-repos/` recursively for `.agent.md` and `SKILL.md`.
 3. Repo Identification: Uses `<org>/<repo>` for external repos and first folder name for custom repos as the "Repo Name" for config matching.
@@ -163,6 +165,7 @@ The `unwanted-for-now` key is ignored by the script. Use it to store URLs you mi
    - Link: Creates a symbolic link in the top-level agents/ or skills/ folder.
    - Purge: Deletes links for blacklisted or un-whitelisted items.
    - Garbage Collection: Deletes "broken" links if a source folder is deleted.
+6. Copilot Home Sync: If `sync_to_copilot_home` is `true`, mirrors all synced symlinks into `~/.copilot/agents` and `~/.copilot/skills`. Existing symlinks are overwritten; stale ones are removed. Regular files/directories are left untouched.
 
 ---
 
@@ -185,6 +188,9 @@ Add to your User settings.json:
     "github.copilot.chat.agentFilesLocations": ["~/path/to/AI/agent-skills-sync-tool/synced-items/agents"],
     "chat.agentSkillsLocations": { "~/path/to/AI/agent-skills-sync-tool/synced-items/skills": true }
 }
+
+#### Visual Studio Code (via ~/.copilot)
+Set `"sync_to_copilot_home": true` in `config.json`. The script will symlink agents and skills directly into `~/.copilot/agents` and `~/.copilot/skills`, which VS Code Copilot picks up automatically — no manual `settings.json` paths needed.
 
 #### IntelliJ / JetBrains
 In your active project root:
