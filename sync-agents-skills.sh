@@ -9,6 +9,7 @@ CUSTOM_REPOS_DIR="$REPOS_ROOT/custom-repos"
 CONFIG_FILE="$REPOS_ROOT/config.json"
 AGENTS_TARGET="$BASE_DIR/artifacts/synced-items/agents"
 SKILLS_TARGET="$BASE_DIR/artifacts/synced-items/skills"
+NAME_DELIMITER="."
 
 # --- ARGUMENT PARSING ---
 DRY_RUN=false
@@ -156,7 +157,7 @@ patch_skill_names() {
         local skill_file
         skill_file=$(awk -F'\t' -v skill="$skill_name" '$1 == skill {print $2; exit}' "$tmpfile")
         [[ -n "$skill_file" ]] || continue
-        local new_name="${repo_base}:${skill_name}"
+        local new_name="${repo_base}${NAME_DELIMITER}${skill_name}"
         sed_inplace "s/^name: .*/name: ${new_name}/" "$skill_file"
         echo "  📝 Patched skill name → ${new_name}"
     done
@@ -286,7 +287,7 @@ for source_root in "$EXTERNAL_REPOS_DIR" "$CUSTOM_REPOS_DIR"; do
         relative_path=${src#$source_root/}
         repo_name=$(repo_id_for_item "$source_root" "$relative_path")
         agent_filename=$(basename "$src")
-        dest="$AGENTS_TARGET/$(basename "$repo_name"):${agent_filename}"
+        dest="$AGENTS_TARGET/$(basename "$repo_name")${NAME_DELIMITER}${agent_filename}"
 
         if [[ $(check_config "agaent_config" "$repo_name" "$agent_filename") == "true" ]]; then
             echo "✅ Linking Agent: $(basename "$dest") (Repo: $repo_name)"
@@ -356,7 +357,7 @@ for source_root in "$EXTERNAL_REPOS_DIR" "$CUSTOM_REPOS_DIR"; do
         echo "$matched_skills" | while IFS= read -r skill_name; do
             [[ -n "$skill_name" ]] || continue
             src_dir=$(awk -F'\t' -v repo="$repo_name" -v skill="$skill_name" '$1 == repo && $2 == skill {print $3; exit}' "$_skill_tmp")
-            dest="$SKILLS_TARGET/$(basename "$repo_name"):${skill_name}"
+            dest="$SKILLS_TARGET/$(basename "$repo_name")${NAME_DELIMITER}${skill_name}"
             echo "✅ Linking Skill: $(basename "$dest") (Repo: $repo_name)"
             [ "$DRY_RUN" = false ] && ln -sfn "$src_dir" "$dest"
         done
@@ -365,7 +366,7 @@ for source_root in "$EXTERNAL_REPOS_DIR" "$CUSTOM_REPOS_DIR"; do
         echo "$_repo_skills" | while IFS= read -r skill_name; do
             [[ -n "$skill_name" ]] || continue
             if ! echo "$matched_skills" | grep -qxF "$skill_name"; then
-                dest="$SKILLS_TARGET/$(basename "$repo_name"):${skill_name}"
+                dest="$SKILLS_TARGET/$(basename "$repo_name")${NAME_DELIMITER}${skill_name}"
                 [ -L "$dest" ] && echo "🗑️  Removing Skill: $(basename "$dest")" && [ "$DRY_RUN" = false ] && rm -f "$dest"
             fi
         done
