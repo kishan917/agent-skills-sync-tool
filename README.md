@@ -182,19 +182,13 @@ Requires jq installed (brew install jq on Mac).
 
 ### IDE Integration
 
-#### Visual Studio Code
+#### Recommended: Via ~/.copilot (VS Code & IntelliJ)
+Set `"sync_to_copilot_home": true` in `config.json`. The script will symlink agents and skills directly into `~/.copilot/agents` and `~/.copilot/skills`, which both VS Code Copilot and IntelliJ pick up automatically — no manual configuration needed.
+
+#### Alternative: VS Code via settings.json
 Add to your User settings.json:
 {
     "github.copilot.chat.agentFilesLocations": ["~/path/to/AI/agent-skills-sync-tool/synced-items/agents"],
     "chat.agentSkillsLocations": { "~/path/to/AI/agent-skills-sync-tool/synced-items/skills": true }
 }
-
-#### Visual Studio Code (via ~/.copilot)
-Set `"sync_to_copilot_home": true` in `config.json`. The script will symlink agents and skills directly into `~/.copilot/agents` and `~/.copilot/skills`, which VS Code Copilot picks up automatically — no manual `settings.json` paths needed.
-
-#### IntelliJ / JetBrains
-In your active project root:
-mkdir -p .github
-ln -s ~/path/to/AI/agent-skills-sync-tool/synced-items/agents .github/agents
-ln -s ~/path/to/AI/agent-skills-sync-tool/synced-items/skills .github/skills
 
