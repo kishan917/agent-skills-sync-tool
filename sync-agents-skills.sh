@@ -266,9 +266,9 @@ check_config() {
         
         reduce $order[] as $step (false;
             if $step == "whitelist" then 
-                if is_in_list($cfg.whitelist // []; $repo; $item_full; $item_base; (if $key == "agaent_config" then "agent" else "skill" end)) then true else . end
+                if is_in_list($cfg.whitelist // []; $repo; $item_full; $item_base; (if $key == "agent_config" then "agent" else "skill" end)) then true else . end
             elif $step == "blacklist" then
-                if is_in_list($cfg.blacklist // []; $repo; $item_full; $item_base; (if $key == "agaent_config" then "agent" else "skill" end)) then false else . end
+                if is_in_list($cfg.blacklist // []; $repo; $item_full; $item_base; (if $key == "agent_config" then "agent" else "skill" end)) then false else . end
             else . end
         )
     ' "$CONFIG_FILE"
@@ -289,7 +289,7 @@ for source_root in "$EXTERNAL_REPOS_DIR" "$CUSTOM_REPOS_DIR"; do
         agent_filename=$(basename "$src")
         dest="$AGENTS_TARGET/$(basename "$repo_name")${NAME_DELIMITER}${agent_filename}"
 
-        if [[ $(check_config "agaent_config" "$repo_name" "$agent_filename") == "true" ]]; then
+        if [[ $(check_config "agent_config" "$repo_name" "$agent_filename") == "true" ]]; then
             echo "✅ Linking Agent: $(basename "$dest") (Repo: $repo_name)"
             [ "$DRY_RUN" = false ] && ln -sf "$src" "$dest"
         else

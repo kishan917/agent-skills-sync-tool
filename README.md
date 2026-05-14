@@ -36,7 +36,7 @@ This tool clones configured external repositories into `repos/external-repos/<or
 
 | Key | Purpose |
 | :--- | :--- |
-| `agaent_config` | Controls which `.agent.md` files are symlinked |
+| `agent_config` | Controls which `.agent.md` files are symlinked |
 | `skill_config` | Controls which `SKILL.md` folders are symlinked |
 | `external_repos` | List of Git URLs to clone/pull into `external-repos/<org>/<repo>` |
 | `patch_skill_names` | `true` (default) — rewrites `name:` in each external `SKILL.md` to `<repo>.<skill>` so VS Code Copilot shows the namespaced name. Set to `false` to keep original names. |

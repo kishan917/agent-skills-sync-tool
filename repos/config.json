@@ -1,5 +1,5 @@
 {
-    "agaent_config": {
+    "agent_config": {
         "apply_order":
         ["whitelist","blacklist"],
         "whitelist":[
